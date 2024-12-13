@@ -100,12 +100,12 @@ button:hover {
 }
 
 .stats {
-  font-size: 0.9em; /* Adjust font size for overall stats */
+  font-size: 0.9em; 
   
-  color: #ffffff; /* Ensure text remains visible */
+  color: #ffffff; 
 }
 
 .stats p {
-  margin: 5px 0; /* Reduce spacing between stats lines */
-  font-size: 0.9em; /* Decrease individual paragraph text size */
+  margin: 5px 0; 
+  font-size: 0.9em;
 }
