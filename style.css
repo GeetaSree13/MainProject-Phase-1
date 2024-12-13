@@ -109,3 +109,7 @@ button:hover {
   margin: 5px 0; 
   font-size: 0.9em;
 }
+.todo-item.completed span {
+  text-decoration: line-through;
+  opacity: 0.7;
+}
