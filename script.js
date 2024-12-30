@@ -7,20 +7,44 @@ const totalCount = document.getElementById('total-count');
 let completedTasks = 0;
 let totalTasks = 0;
 
+const API_BASE_URL = "http://localhost:8080/api/v1/todo";
+
+// Fetch existing tasks from the backend when the page loads
+document.addEventListener('DOMContentLoaded', () => {
+  fetch(`${API_BASE_URL}/getall`)
+    .then(response => {
+      if (!response.ok) throw new Error("Failed to fetch todos");
+      return response.json();
+    })
+    .then(data => {
+      data.forEach(todo => {
+        addTodoItem(todo.todoName, todo.completed, todo._id, false);
+      });
+    })
+    .catch(error => console.error('Error fetching todos:', error));
+});
+
+// Add Button Click Listener
 addBtn.addEventListener('click', () => {
   const todoText = todoInput.value.trim();
   if (todoText) {
-    addTodoItem(todoText);
-    todoInput.value = '';
+    saveTodoToBackend(todoText, false); 
+    todoInput.value = ''; 
+  } else {
+    alert("Please enter a task!"); 
   }
 });
 
-function addTodoItem(text) {
+// Function to Add a To-Do Item to the DOM
+function addTodoItem(text, isCompleted = false, id = null, saveToBackend = false) {
   totalTasks++;
+  if (isCompleted) completedTasks++;
   updateStats();
 
   const todoItem = document.createElement('li');
   todoItem.classList.add('todo-item');
+  if (isCompleted) todoItem.classList.add('completed');
+  if (id) todoItem.dataset.id = id; 
 
   const todoText = document.createElement('span');
   todoText.textContent = text;
@@ -35,8 +59,10 @@ function addTodoItem(text) {
     todoItem.classList.toggle('completed');
     if (todoItem.classList.contains('completed')) {
       completedTasks++;
+      updateTodoStatus(todoItem.dataset.id, true);
     } else {
       completedTasks--;
+      updateTodoStatus(todoItem.dataset.id, false);
     }
     updateStats();
   });
@@ -49,6 +75,7 @@ function addTodoItem(text) {
       completedTasks--;
     }
     totalTasks--;
+    deleteTodoItem(todoItem.dataset.id);
     todoList.removeChild(todoItem);
     updateStats();
   });
@@ -64,3 +91,64 @@ function updateStats() {
   completedCount.textContent = completedTasks;
   totalCount.textContent = totalTasks;
 }
+
+// Save New To-Do to the Backend
+function saveTodoToBackend(todoName, completed) {
+  fetch(`${API_BASE_URL}/save`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ todoName, completed })
+  })
+    .then(response => {
+      if (!response.ok) {
+        return response.json().then(err => {
+          throw new Error(err.message || "Failed to save todo");
+        });
+      }
+      return response.text();
+    })
+    .then(todoId => {
+      console.log("Todo saved successfully:", todoId);
+      addTodoItem(todoName, completed, todoId, false); 
+    })
+    .catch(error => {
+      console.error('Error saving todo:', error);
+      alert(`Failed to save the task: ${error.message}`);
+    });
+}
+
+
+// Update To-Do Status in the Backend
+function updateTodoStatus(id, completed) {
+  const todoItem = document.querySelector(`[data-id="${id}"]`);
+  const todoName = todoItem.querySelector('span').textContent;
+
+  fetch(`${API_BASE_URL}/edit/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ todoName, completed })
+  })
+    .then(response => {
+      if (!response.ok) throw new Error("Failed to update todo");
+      return response.json();
+    })
+    .then(data => console.log('Todo updated:', data))
+    .catch(error => console.error('Error updating todo:', error));
+}
+
+
+// Delete To-Do from the Backend
+function deleteTodoItem(id) {
+  fetch(`${API_BASE_URL}/delete/${id}`, {
+    method: 'DELETE'
+  })
+    .then(response => {
+      if (!response.ok) {
+        throw new Error("Failed to delete todo");
+      }
+      console.log('Todo deleted successfully');
+    })
+    .catch(error => console.error('Error deleting todo:', error));
+}
+
+
