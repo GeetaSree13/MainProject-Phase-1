@@ -61,7 +61,7 @@ pipeline {
         
         stage('Deploy to Kubernetes Cluster') {
             steps {
-                withCredentials([kubeconfigFile(credentialsId: "${KUBECONFIG_CREDENTIALS}", variable: 'KUBECONFIG')]) {
+                withKubeConfig([credentialsId: "${KUBECONFIG_CREDENTIALS}"]) {
                     script {
                         echo "☸️ Deploying to Kubernetes cluster..."
                         sh """

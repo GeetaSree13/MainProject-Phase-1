@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: todo-app
-        image: geetasree13/todo-app:IMAGE_TAG
+        image: geetasree0103/todo-app:IMAGE_TAG
         ports:
         - containerPort: 80
 ---
