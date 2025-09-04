@@ -7,18 +7,17 @@ pipeline {
     }
     
     environment {
-        // Docker registry credentials (configure in Jenkins)
-        DOCKER_REGISTRY = 'docker.io'
-        DOCKER_REPO = 'geetasree13/todo-app'
-        IMAGE_TAG = "${BUILD_NUMBER}"
-        KUBECONFIG_CREDENTIAL_ID = 'kubeconfig'
-        DOCKER_CREDENTIAL_ID = 'docker-hub-credentials'
+        DOCKERHUB_CREDENTIALS = credentials('dockerhub-credentials')
+        DOCKERHUB_REPO = "geetasree13/todo-app"
+        APP_VERSION = "v1.0.${BUILD_NUMBER}"
+        KUBECONFIG_CREDENTIALS = 'kubeconfig'
+        PATH = "/usr/local/bin:${env.PATH}"
     }
     
     stages {
-        stage('Checkout') {
+        stage('Checkout from GitHub') {
             steps {
-                echo 'Checking out source code...'
+                echo "🔄 Cloning GitHub repository..."
                 checkout scm
             }
         }
@@ -26,50 +25,63 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    echo 'Building Docker image...'
-                    
-                    // Use full path to docker to avoid PATH issues
-                    sh "/usr/local/bin/docker build -t ${DOCKER_REPO}:${IMAGE_TAG} ."
-                    sh "/usr/local/bin/docker tag ${DOCKER_REPO}:${IMAGE_TAG} ${DOCKER_REPO}:latest"
+                    echo "🐳 Building Docker image from Dockerfile..."
+                    sh """
+                        export DOCKER_CONFIG=\$(mktemp -d)
+                        echo '{}' > \$DOCKER_CONFIG/config.json
+                        docker build -t $DOCKERHUB_REPO:$APP_VERSION .
+                    """
                 }
             }
         }
         
-        stage('Push to Registry') {
+        stage('Login to DockerHub') {
             steps {
                 script {
-                    echo 'Pushing Docker image to registry...'
-                    
-                    // Login to Docker registry
-                    withCredentials([usernamePassword(credentialsId: "${DOCKER_CREDENTIAL_ID}", usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-                        sh "/usr/local/bin/docker login -u \$DOCKER_USER -p \$DOCKER_PASS ${DOCKER_REGISTRY}"
-                        sh "/usr/local/bin/docker push ${DOCKER_REPO}:${IMAGE_TAG}"
-                        sh "/usr/local/bin/docker push ${DOCKER_REPO}:latest"
-                    }
+                    echo "🔐 Logging into Docker Hub..."
+                    sh """
+                        docker login -u $DOCKERHUB_CREDENTIALS_USR -p $DOCKERHUB_CREDENTIALS_PSW
+                    """
                 }
             }
         }
         
-        stage('Deploy to Kubernetes') {
+        stage('Push Docker Image to DockerHub') {
             steps {
-                withCredentials([kubeconfigFile(credentialsId: "${KUBECONFIG_CREDENTIAL_ID}", variable: 'KUBECONFIG')]) {
+                script {
+                    echo "🚀 Pushing Docker image to DockerHub..."
+                    sh """
+                        docker push $DOCKERHUB_REPO:$APP_VERSION
+                        docker tag $DOCKERHUB_REPO:$APP_VERSION $DOCKERHUB_REPO:latest
+                        docker push $DOCKERHUB_REPO:latest
+                    """
+                }
+            }
+        }
+        
+        stage('Deploy to Kubernetes Cluster') {
+            steps {
+                withCredentials([kubeconfigFile(credentialsId: "${KUBECONFIG_CREDENTIALS}", variable: 'KUBECONFIG')]) {
                     script {
-                        echo 'Deploying to Kubernetes...'
-                        
-                        // Apply Kubernetes manifests
-                        sh '''
+                        echo "☸️ Deploying to Kubernetes cluster..."
+                        sh """
                             # Replace image tag in deployment
-                            sed -i "s|IMAGE_TAG|${IMAGE_TAG}|g" k8s/deployment.yaml
+                            sed -i "s|IMAGE_TAG|$APP_VERSION|g" k8s/deployment.yaml
                             
-                            # Apply manifests
+                            # Apply Kubernetes manifests
                             kubectl apply -f k8s/
                             
                             # Wait for deployment rollout
                             kubectl rollout status deployment/todo-app --timeout=300s
                             
-                            # Get service info
+                            # Get service information
+                            echo "🌐 Service Details:"
                             kubectl get service todo-app-service
-                        '''
+                            
+                            # Get pod status
+                            echo "📦 Pod Status:"
+                            kubectl get pods -l app=todo-app
+                        """
                     }
                 }
             }
@@ -78,18 +90,17 @@ pipeline {
     
     post {
         success {
-            echo 'Pipeline completed successfully!'
-            echo "Application deployed with image: ${DOCKER_REPO}:${IMAGE_TAG}"
+            echo "✅ Build, Docker image, push, and Kubernetes deployment completed successfully!"
+            echo "🎉 Application deployed with image: $DOCKERHUB_REPO:$APP_VERSION"
         }
         failure {
-            echo 'Pipeline failed!'
+            echo "❌ Pipeline failed. Check logs for errors."
         }
         always {
-            echo 'Cleaning up...'
-            // Clean up local Docker images to save space
+            echo "🧹 Cleaning up Docker images..."
             sh '''
-                /usr/local/bin/docker image prune -f
-                /usr/local/bin/docker container prune -f
+                docker image prune -f || true
+                docker container prune -f || true
             '''
         }
     }
