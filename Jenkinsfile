@@ -8,7 +8,7 @@ pipeline {
     
     environment {
         DOCKERHUB_CREDENTIALS = credentials('dockerhub-credentials')
-        DOCKERHUB_REPO = "geetasree13/todo-app"
+        DOCKERHUB_REPO = "geetasree0103/todo-app"
         APP_VERSION = "v1.0.${BUILD_NUMBER}"
         KUBECONFIG_CREDENTIALS = 'kubeconfig'
         PATH = "/usr/local/bin:${env.PATH}"
