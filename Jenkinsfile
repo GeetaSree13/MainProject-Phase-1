@@ -9,7 +9,7 @@ pipeline {
     environment {
         // Docker registry credentials (configure in Jenkins)
         DOCKER_REGISTRY = 'docker.io'
-        DOCKER_REPO = 'your-dockerhub-username/todo-app'
+        DOCKER_REPO = 'geetasree13/todo-app'
         IMAGE_TAG = "${BUILD_NUMBER}"
         KUBECONFIG_CREDENTIAL_ID = 'kubeconfig'
         DOCKER_CREDENTIAL_ID = 'docker-hub-credentials'
@@ -27,10 +27,10 @@ pipeline {
             steps {
                 script {
                     echo 'Building Docker image...'
-                    def dockerImage = docker.build("${DOCKER_REPO}:${IMAGE_TAG}")
                     
-                    // Also tag as latest
-                    dockerImage.tag("latest")
+                    // Use full path to docker to avoid PATH issues
+                    sh "/usr/local/bin/docker build -t ${DOCKER_REPO}:${IMAGE_TAG} ."
+                    sh "/usr/local/bin/docker tag ${DOCKER_REPO}:${IMAGE_TAG} ${DOCKER_REPO}:latest"
                 }
             }
         }
@@ -39,10 +39,12 @@ pipeline {
             steps {
                 script {
                     echo 'Pushing Docker image to registry...'
-                    docker.withRegistry("https://${DOCKER_REGISTRY}", "${DOCKER_CREDENTIAL_ID}") {
-                        def dockerImage = docker.image("${DOCKER_REPO}:${IMAGE_TAG}")
-                        dockerImage.push()
-                        dockerImage.push("latest")
+                    
+                    // Login to Docker registry
+                    withCredentials([usernamePassword(credentialsId: "${DOCKER_CREDENTIAL_ID}", usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                        sh "/usr/local/bin/docker login -u \$DOCKER_USER -p \$DOCKER_PASS ${DOCKER_REGISTRY}"
+                        sh "/usr/local/bin/docker push ${DOCKER_REPO}:${IMAGE_TAG}"
+                        sh "/usr/local/bin/docker push ${DOCKER_REPO}:latest"
                     }
                 }
             }
@@ -86,8 +88,8 @@ pipeline {
             echo 'Cleaning up...'
             // Clean up local Docker images to save space
             sh '''
-                docker image prune -f
-                docker container prune -f
+                /usr/local/bin/docker image prune -f
+                /usr/local/bin/docker container prune -f
             '''
         }
     }
