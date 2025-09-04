@@ -65,8 +65,8 @@ pipeline {
                     script {
                         echo "☸️ Deploying to Kubernetes cluster..."
                         sh """
-                            # Replace image tag in deployment
-                            sed -i "s|IMAGE_TAG|$APP_VERSION|g" k8s/deployment.yaml
+                            # Replace image tag in deployment (macOS compatible)
+                            sed -i '' "s|IMAGE_TAG|$APP_VERSION|g" k8s/deployment.yaml
                             
                             # Apply Kubernetes manifests
                             kubectl apply -f k8s/
