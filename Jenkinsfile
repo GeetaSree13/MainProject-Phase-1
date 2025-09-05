@@ -1,7 +1,6 @@
 pipeline {
     agent any
     
-    // Auto-trigger build on SCM changes (polls every minute)
     triggers {
         pollSCM('* * * * *')
     }
@@ -17,7 +16,7 @@ pipeline {
     stages {
         stage('Checkout from GitHub') {
             steps {
-                echo "🔄 Cloning GitHub repository..."
+                echo "Cloning GitHub repository"
                 checkout scm
             }
         }
@@ -25,7 +24,7 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    echo "🐳 Building Docker image from Dockerfile..."
+                    echo "Building Docker image from Dockerfile"
                     sh """
                         export DOCKER_CONFIG=\$(mktemp -d)
                         echo '{}' > \$DOCKER_CONFIG/config.json
@@ -38,7 +37,7 @@ pipeline {
         stage('Login to DockerHub') {
             steps {
                 script {
-                    echo "🔐 Logging into Docker Hub..."
+                    echo "Logging into Docker Hub"
                     sh """
                         docker login -u $DOCKERHUB_CREDENTIALS_USR -p $DOCKERHUB_CREDENTIALS_PSW
                     """
@@ -49,7 +48,7 @@ pipeline {
         stage('Push Docker Image to DockerHub') {
             steps {
                 script {
-                    echo "🚀 Pushing Docker image to DockerHub..."
+                    echo "Pushing Docker image to DockerHub"
                     sh """
                         docker push $DOCKERHUB_REPO:$APP_VERSION
                         docker tag $DOCKERHUB_REPO:$APP_VERSION $DOCKERHUB_REPO:latest
@@ -63,24 +62,11 @@ pipeline {
             steps {
                 withKubeConfig([credentialsId: "${KUBECONFIG_CREDENTIALS}"]) {
                     script {
-                        echo "☸️ Deploying to Kubernetes cluster..."
+                        echo "Deploying to Kubernetes cluster..."
                         sh """
-                            # Replace image tag in deployment (macOS compatible)
                             sed -i '' "s|IMAGE_TAG|$APP_VERSION|g" k8s/deployment.yaml
-                            
-                            # Apply Kubernetes manifests
                             kubectl apply -f k8s/
-                            
-                            # Wait for deployment rollout
                             kubectl rollout status deployment/todo-app --timeout=300s
-                            
-                            # Get service information
-                            echo "🌐 Service Details:"
-                            kubectl get service todo-app-service
-                            
-                            # Get pod status
-                            echo "📦 Pod Status:"
-                            kubectl get pods -l app=todo-app
                         """
                     }
                 }
@@ -90,14 +76,13 @@ pipeline {
     
     post {
         success {
-            echo "✅ Build, Docker image, push, and Kubernetes deployment completed successfully!"
-            echo "🎉 Application deployed with image: $DOCKERHUB_REPO:$APP_VERSION"
+            echo "Application deployed sucessfully with image: $DOCKERHUB_REPO:$APP_VERSION"
         }
         failure {
-            echo "❌ Pipeline failed. Check logs for errors."
+            echo "Pipeline failed"
         }
         always {
-            echo "🧹 Cleaning up Docker images..."
+            echo "Cleaning up Docker images"
             sh '''
                 docker image prune -f || true
                 docker container prune -f || true
