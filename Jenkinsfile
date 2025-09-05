@@ -66,6 +66,7 @@ pipeline {
                         sh """
                             sed -i '' "s|IMAGE_TAG|$APP_VERSION|g" k8s/deployment.yaml
                             kubectl apply -f k8s/
+                            kubectl set image deployment/todo-app todo-app=$DOCKERHUB_REPO:$APP_VERSION --record
                             kubectl rollout status deployment/todo-app --timeout=300s
                         """
                     }
