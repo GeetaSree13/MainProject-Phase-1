@@ -15,7 +15,7 @@ spec:
         app: my-app
     spec:
       containers:
-      - name: my-app
+      - name: my-app-container
         image: geetasree0103/todo-app:IMAGE_TAG
         ports:
         - containerPort: 80
