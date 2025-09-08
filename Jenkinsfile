@@ -1,10 +1,6 @@
 pipeline {
     agent any
     
-    triggers {
-        githubPush()
-    }
-    
     environment {
         DOCKERHUB_CREDENTIALS = credentials('dockerhub-credentials')
         DOCKERHUB_REPO = "geetasree0103/todo-app"
