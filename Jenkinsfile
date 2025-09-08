@@ -3,6 +3,5 @@
 geetaCi(
     dockerCreds : 'dockerhub-credentials',
     dockerRepo  : 'geetasree0103/todo-app',
-    appVersion  : '1.1.4',   // or pass from Jenkins build parameter
-    path     : '/usr/local/bin:${env.PATH}'
+    appVersion  : '1.1.4'
 )
