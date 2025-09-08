@@ -2,15 +2,7 @@ pipeline {
     agent any
     
     triggers {
-        GenericTrigger(
-            genericVariables: [
-                [key: 'ref', value: '$.ref']
-            ],
-            causeString: 'Triggered by GitHub push',
-            token: 'github-webhook-token',
-            regexpFilterText: '$ref',
-            regexpFilterExpression: 'refs/heads/main'
-        )
+        githubPush()
     }
     
     environment {
