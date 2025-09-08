@@ -1,21 +1,21 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: todo-app
+  name: my-app
   labels:
-    app: todo-app
+    app: my-app
 spec:
   replicas: 3
   selector:
     matchLabels:
-      app: todo-app
+      app: my-app
   template:
     metadata:
       labels:
-        app: todo-app
+        app: my-app
     spec:
       containers:
-      - name: todo-app
+      - name: my-app
         image: geetasree0103/todo-app:IMAGE_TAG
         ports:
         - containerPort: 80

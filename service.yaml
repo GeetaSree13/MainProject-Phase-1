@@ -3,7 +3,7 @@ kind: Service
 metadata:
   name: todo-app-service
   labels:
-    app: todo-app
+    app: my-app
 spec:
   type: LoadBalancer
   ports:
@@ -11,4 +11,4 @@ spec:
     targetPort: 80
     protocol: TCP
   selector:
-    app: todo-app
+    app: my-app
