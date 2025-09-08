@@ -1,0 +1,9 @@
+@Library('ci-cd-library') _
+ 
+cdPipeline(
+    dockerRepo : 'geetasree0103/todo-app',
+    appVersion : '1.1.5',
+    gitCommit  : 'abc1234',
+    k8sCreds   : 'k8s-token',
+    k8sServer  : 'https://34.170.51.130'
+)
