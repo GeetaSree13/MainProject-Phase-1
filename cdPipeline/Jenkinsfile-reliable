@@ -1,0 +1,69 @@
+pipeline {
+    agent any
+    
+    parameters {
+        string(name: 'DOCKER_REPO', defaultValue: 'geetasree0103/todo-app', description: 'Docker repository')
+        string(name: 'APP_VERSION', defaultValue: '1.1.5', description: 'Application version')
+        string(name: 'K8S_SERVER', defaultValue: 'https://34.170.51.130', description: 'Kubernetes server URL')
+    }
+    
+    environment {
+        KUBECTL_CMD = "/usr/local/bin/kubectl"
+        K8S_CREDENTIALS = credentials('k8s-token')
+    }
+    
+    stages {
+        stage('Checkout from GitHub') {
+            steps {
+                echo "Cloning GitHub repository"
+                checkout scm
+            }
+        }
+        
+        stage('Deploy to Kubernetes') {
+            steps {
+                script {
+                    echo "Deploying ${params.DOCKER_REPO}:${params.APP_VERSION} to Kubernetes..."
+                    sh """
+                        # Configure kubectl
+                        ${KUBECTL_CMD} config set-cluster jenkins-cluster --server=${params.K8S_SERVER} --insecure-skip-tls-verify=true
+                        ${KUBECTL_CMD} config set-credentials jenkins --token=${K8S_CREDENTIALS}
+                        ${KUBECTL_CMD} config set-context jenkins-context --cluster=jenkins-cluster --user=jenkins
+                        ${KUBECTL_CMD} config use-context jenkins-context
+                        
+                        # Update deployment YAML
+                        sed -i '' "s|IMAGE_TAG|${params.APP_VERSION}|g" k8s/deployment.yaml
+                        
+                        # Deploy to Kubernetes
+                        ${KUBECTL_CMD} apply -f k8s/
+                        ${KUBECTL_CMD} set image deployment/todo-app todo-app=${params.DOCKER_REPO}:${params.APP_VERSION} --record
+                        ${KUBECTL_CMD} rollout status deployment/todo-app --timeout=300s
+                        
+                        echo "Deployment successful!"
+                    """
+                }
+            }
+        }
+        
+        stage('Verify Deployment') {
+            steps {
+                script {
+                    sh """
+                        echo "Verifying deployment..."
+                        ${KUBECTL_CMD} get pods -l app=todo-app
+                        ${KUBECTL_CMD} get services
+                    """
+                }
+            }
+        }
+    }
+    
+    post {
+        success {
+            echo "Deployment completed successfully: ${params.DOCKER_REPO}:${params.APP_VERSION}"
+        }
+        failure {
+            echo "Deployment failed. Check the logs above."
+        }
+    }
+}
